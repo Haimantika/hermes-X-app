@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SlopScore — the Turing test for your timeline</title>
+  <meta name="description" content="Score how AI-generated your writing reads. Receipts included." />
+  <meta property="og:title" content="SlopScore" />
+  <meta property="og:description" content="The Turing test for your timeline. Get roasted with receipts." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%230b0b0c'/><circle cx='50' cy='34' r='6' fill='%23c6ff3d'/><text x='50' y='72' font-family='monospace' font-size='30' font-weight='700' fill='%23f4f1ea' text-anchor='middle'>AI</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="grid-overlay"></div>
+
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand"><span class="pulse"></span> slopscore.exe</div>
+      <nav>
+        <a href="#leaderboard" id="nav-leaderboard">leaderboard</a>
+        <a href="#" id="nav-unlock">unlock&nbsp;$2</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <h1>The Turing test for<br /><em>your timeline</em></h1>
+        <p class="sub">
+          Drop an X handle. We pull recent posts, score the verbal tics of AI writing
+          — em-dashes, “it's not X, it's Y,” “delve,” emoji bullets, the tricolon rhythm —
+          and roast them with receipts.
+        </p>
+
+        <form id="score-form" class="score-box" autocomplete="off">
+          <span class="at">@</span>
+          <input id="handle" name="slop_handle" placeholder="yourusername" maxlength="15"
+                 spellcheck="false" autocomplete="off" autocapitalize="off"
+                 autocorrect="off" inputmode="text" data-lpignore="true" data-1p-ignore />
+          <button type="submit" id="score-btn">Run scan</button>
+        </form>
+        <p class="disclaimer">a vibes rating on your writing <em>style</em> — not a claim about who typed it.</p>
+        <p class="hint" id="hermes-badge"></p>
+      </section>
+
+      <!-- Loading -->
+      <section id="loading" class="loading hidden">
+        <span class="cursor-blink">▋</span>
+        <p id="loading-line">waking up hermes…</p>
+      </section>
+
+      <!-- Result -->
+      <section id="result" class="result hidden">
+        <div class="panel scan-panel">
+          <div class="scan-head">
+            <div class="scan-id">scan_result // @<span id="result-handle"></span></div>
+            <div class="tier-badge" id="tier-badge"></div>
+          </div>
+
+          <div class="score-row">
+            <div class="score-num" id="score-num">0</div>
+            <div class="score-den">/ 100 slop</div>
+          </div>
+          <p class="tagline" id="tagline"></p>
+          <p class="meta" id="meta"></p>
+
+          <div class="bars" id="signal-bars"></div>
+
+          <div class="tips-block">
+            <div class="section-label">how to sound less like a bot</div>
+            <div class="tips-list" id="tips-list"></div>
+          </div>
+        </div>
+
+        <!-- Shareable card -->
+        <div class="card-block">
+          <div class="section-label">your shareable card</div>
+          <div class="share-card">
+            <div class="scanline"></div>
+            <img id="card-img" alt="Your SlopScore verdict card" />
+          </div>
+          <div class="card-actions">
+            <a id="download-card" class="btn primary" download>download card</a>
+            <button id="share-btn" class="btn ghost">copy roast</button>
+          </div>
+        </div>
+
+        <!-- Receipts -->
+        <div class="panel">
+          <div class="section-label">the receipts</div>
+          <ul id="receipts-list" class="receipts"></ul>
+        </div>
+
+        <!-- Roast -->
+        <div class="panel">
+          <div class="section-label">the roast</div>
+          <p id="roast-text" class="roast-text"></p>
+          <audio id="clip" controls class="hidden"></audio>
+        </div>
+
+        <!-- Unlock -->
+        <div class="panel unlock-cta">
+          <p>want <strong>every</strong> tell, per-tweet forensics, or to roast someone anonymously?</p>
+          <button class="btn primary" id="unlock-btn">unlock full breakdown — $2</button>
+        </div>
+      </section>
+
+      <!-- Leaderboard -->
+      <section id="leaderboard" class="leaderboard">
+        <div class="section-label">leaderboard</div>
+        <div class="tabs">
+          <button class="tab active" data-dir="slop">most slop-pilled</button>
+          <button class="tab" data-dir="human">most human</button>
+        </div>
+        <ol id="board-list" class="board"></ol>
+        <p class="board-cta">go check your fave's score, they're def top 10 slop 👀</p>
+      </section>
+    </main>
+
+    <footer>
+      <span>slopscore</span> · wired as a hermes harness · linkup + elevenlabs + image gen + convex + dodo
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Register the SlopScore MCP server with Hermes Agent.
+#
+# Merge this block into your ~/.hermes/config.yaml (under `mcp_servers`).
+# On startup Hermes discovers the slopscore tools (score_slop, fetch_tweets,
+# get_leaderboard) and can call them — this is the mandatory "Hermes runs it"
+# path that the webapp invokes via `hermes -z`.
+#
+# Point `args` at THIS project. In dev we run the server with tsx; in prod
+# build first (`npm run build`) and use: command "node", args [".../dist/mcp/server.js"].
+# ─────────────────────────────────────────────────────────────────────────
+
+mcp_servers:
+  slopscore:
+    command: "npx"
+    args:
+      - "tsx"
+      - "/ABSOLUTE/PATH/TO/hermes-X-app/src/mcp/server.ts"
+    # Pass through any live API keys the tools need (all optional — they
+    # fall back to mock mode if absent).
+    env:
+      LINKUP_API_KEY: ""
+      CONVEX_URL: ""
+    timeout: 120
+    connect_timeout: 60
+    # Optional: restrict which tools Hermes sees.
+    # tools:
+    #   include: [score_slop, fetch_tweets, get_leaderboard]
