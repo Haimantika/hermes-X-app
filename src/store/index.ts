@@ -38,8 +38,6 @@ export interface Store {
   history(handle: string, limit?: number): Promise<HistoryRow[]>;
   stale(olderThanMs: number, limit?: number): Promise<LeaderRow[]>;
   touchUser(userId: string, handle?: string): Promise<void>;
-  isPremium(userId: string): Promise<boolean>;
-  setPremium(userId: string, premium: boolean): Promise<void>;
 }
 
 // ── Convex backend ─────────────────────────────────────────────────────────
@@ -93,15 +91,6 @@ class ConvexStore implements Store {
   async touchUser(userId: string, handle?: string): Promise<void> {
     await this.client.mutation(this.api.users.touch, { userId, handle });
   }
-
-  async isPremium(userId: string): Promise<boolean> {
-    const u = await this.client.query(this.api.users.get, { userId });
-    return Boolean(u?.premium);
-  }
-
-  async setPremium(userId: string, premium: boolean): Promise<void> {
-    await this.client.mutation(this.api.users.setPremium, { userId, premium });
-  }
 }
 
 // ── Local JSON backend ─────────────────────────────────────────────────────
@@ -109,7 +98,7 @@ class ConvexStore implements Store {
 interface LocalData {
   scores: Record<string, LeaderRow>;
   history: HistoryRow[];
-  users: Record<string, { premium: boolean; handle?: string; lastScoredAt?: number }>;
+  users: Record<string, { handle?: string; lastScoredAt?: number }>;
 }
 
 class LocalStore implements Store {
@@ -185,22 +174,9 @@ class LocalStore implements Store {
 
   async touchUser(userId: string, handle?: string): Promise<void> {
     await this.load();
-    const u = this.data.users[userId] ?? { premium: false };
+    const u = this.data.users[userId] ?? {};
     u.handle = handle ?? u.handle;
     u.lastScoredAt = Date.now();
-    this.data.users[userId] = u;
-    await this.save();
-  }
-
-  async isPremium(userId: string): Promise<boolean> {
-    await this.load();
-    return Boolean(this.data.users[userId]?.premium);
-  }
-
-  async setPremium(userId: string, premium: boolean): Promise<void> {
-    await this.load();
-    const u = this.data.users[userId] ?? { premium: false };
-    u.premium = premium;
     this.data.users[userId] = u;
     await this.save();
   }

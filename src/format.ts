@@ -12,7 +12,7 @@ export function scoreBar(score: number, width = 20): string {
 }
 
 /** Full text verdict (used by CLI and as the bot caption fallback). */
-export function formatReport(report: SlopReport, opts: { premium?: boolean } = {}): string {
+export function formatReport(report: SlopReport): string {
   const lines: string[] = [];
   lines.push(`🧪 SlopScore for @${report.handle}`);
   lines.push(`${report.slopScore}/100  ${scoreBar(report.slopScore)}`);
@@ -22,13 +22,9 @@ export function formatReport(report: SlopReport, opts: { premium?: boolean } = {
   lines.push("📋 The receipts:");
 
   const fired = report.tells.filter((t) => t.hits > 0);
-  const shown = opts.premium ? fired : fired.slice(0, 3);
-  for (const t of shown) {
+  for (const t of fired) {
     const quote = t.receipts[0]?.quote;
     lines.push(`• ${t.label} — ${t.hits}×${quote ? `  “${quote}”` : ""}`);
-  }
-  if (!opts.premium && fired.length > 3) {
-    lines.push(`…and ${fired.length - 3} more tells locked in the forensic breakdown 🔒`);
   }
 
   lines.push("");
@@ -37,8 +33,7 @@ export function formatReport(report: SlopReport, opts: { premium?: boolean } = {
 
   lines.push("");
   lines.push("🧑 How to sound human again:");
-  const tips = opts.premium ? report.tips : report.tips.slice(0, 2);
-  for (const tip of tips) lines.push(`• ${tip}`);
+  for (const tip of report.tips) lines.push(`• ${tip}`);
 
   lines.push("");
   lines.push(`share your score → ${config.publicUrl}`);

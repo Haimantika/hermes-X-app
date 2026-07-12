@@ -4,14 +4,13 @@
  *
  * Flow: DM a handle → LinkUp pulls tweets → engine scores the slop-tells →
  * verdict card (image) + voice clip come back with receipts + "sound human"
- * tips. Leaderboard is shared via Convex. Premium modes gate behind Dodo.
+ * tips. Leaderboard is shared via Convex.
  *
  *   /start                welcome + how it works
  *   <handle>              score that handle (your own or anyone's)
  *   /leaderboard [slop|human]
- *   /forensic <handle>   full breakdown (premium)
- *   /roast <handle>      anonymous roast of someone else (premium)
- *   /unlock              $2 Dodo checkout to unlock premium
+ *   /forensic <handle>   full breakdown
+ *   /roast <handle>      roast of someone else
  *   /caps                show which capabilities are live vs mock
  */
 
@@ -21,7 +20,6 @@ import { config, live, capabilitySummary } from "../config.js";
 import { scoreHandle } from "../pipeline.js";
 import { getStore } from "../store/index.js";
 import { formatReport, formatLeaderboard } from "../format.js";
-import { createCheckout } from "../integrations/dodo.js";
 
 if (!live.telegram) {
   console.error(
@@ -39,13 +37,13 @@ function parseHandle(text: string): string | null {
   return m ? m[1] : null;
 }
 
-async function deliverScore(ctx: any, handle: string, opts: { premium: boolean }) {
+async function deliverScore(ctx: any, handle: string) {
   const status = await ctx.reply(`🔎 Scoring @${handle}… pulling tweets, counting the "delve"s.`);
   try {
     const result = await scoreHandle(handle, {
       requestedBy: String(ctx.from?.id ?? "tg"),
     });
-    const caption = formatReport(result.report, { premium: opts.premium });
+    const caption = formatReport(result.report);
 
     // 1. The verdict card (screenshottable, link baked in).
     if (result.cardPng.length > 0) {
@@ -67,11 +65,7 @@ async function deliverScore(ctx: any, handle: string, opts: { premium: boolean }
     }
 
     // 3. Nudge toward the leaderboard + sharing.
-    if (!opts.premium) {
-      await ctx.reply(
-        `🔓 Want every tell + per-tweet forensics, or to roast someone anonymously?\n/unlock for $${config.dodo.priceUsd}.\n\n📊 /leaderboard to see who's most slop-pilled.`
-      );
-    }
+    await ctx.reply("📊 /leaderboard to see who's most slop-pilled.");
   } catch (err) {
     console.error("score error:", err);
     await ctx.reply("Something broke while scoring. Try again in a sec.");
@@ -90,7 +84,6 @@ bot.command("start", async (ctx) => {
       "Try it: just send `@handle` (or any @).",
       "",
       "📊 /leaderboard — most human vs most slop-pilled",
-      "🔓 /unlock — full forensics + roast-someone mode ($2)",
       "",
       "_It's a vibes rating on your writing style, not a claim about who typed it._",
     ].join("\n"),
@@ -110,55 +103,26 @@ bot.command("leaderboard", async (ctx) => {
   await ctx.reply(formatLeaderboard(rows, direction as "slop" | "human"));
 });
 
-bot.command("unlock", async (ctx) => {
-  const userId = String(ctx.from?.id ?? "tg");
-  const checkout = await createCheckout(userId, ctx.match?.toString().trim() || "self");
-  await ctx.reply(
-    [
-      `🔓 Unlock SlopScore Premium — $${config.dodo.priceUsd}:`,
-      "• Full forensic breakdown (every tell, every receipt, per-tweet)",
-      "• Roast-someone-else mode (score any handle, anonymously)",
-      "",
-      `Checkout: ${checkout.url}`,
-      checkout.source === "mock"
-        ? "\n(demo mode: set DODO_API_KEY + DODO_PRODUCT_ID for real checkout)"
-        : "",
-    ].join("\n")
-  );
-});
-
 bot.command("forensic", async (ctx) => {
   const handle = parseHandle(ctx.match?.toString() ?? "");
   if (!handle) return ctx.reply("usage: /forensic <handle>");
-  const store = await getStore();
-  const premium = await store.isPremium(String(ctx.from?.id ?? "tg"));
-  if (!premium) {
-    return ctx.reply(`🔒 Forensic mode is premium. /unlock for $${config.dodo.priceUsd}.`);
-  }
-  await deliverScore(ctx, handle, { premium: true });
+  await deliverScore(ctx, handle);
 });
 
 bot.command("roast", async (ctx) => {
   const handle = parseHandle(ctx.match?.toString() ?? "");
   if (!handle) return ctx.reply("usage: /roast <handle>");
-  const store = await getStore();
-  const premium = await store.isPremium(String(ctx.from?.id ?? "tg"));
-  if (!premium) {
-    return ctx.reply(
-      `🔒 Roast-someone-else mode is premium (keeps it fun, not abusive). /unlock for $${config.dodo.priceUsd}.`
-    );
-  }
-  await deliverScore(ctx, handle, { premium: true });
+  await deliverScore(ctx, handle);
 });
 
-// Any plain message: treat as a handle to score (free tier).
+// Any plain message: treat as a handle to score.
 bot.on("message:text", async (ctx) => {
   if (ctx.message.text.startsWith("/")) return;
   const handle = parseHandle(ctx.message.text);
   if (!handle) {
     return ctx.reply("Send me an X handle, like `@sama`.", { parse_mode: "Markdown" });
   }
-  await deliverScore(ctx, handle, { premium: false });
+  await deliverScore(ctx, handle);
 });
 
 bot.catch((err) => console.error("bot error:", err));

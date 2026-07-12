@@ -107,7 +107,6 @@ See **[SETUP.md](./SETUP.md)** for the full, step-by-step setup of every capabil
 |---|---|---|
 | `POST` | `/api/score` | `{ handle }` → verdict + `cardUrl` + `clipUrl` |
 | `GET` | `/api/leaderboard?direction=slop\|human` | shared board |
-| `POST` | `/api/unlock` | `{ userId, handle }` → Dodo $2 checkout |
 | `GET` | `/api/health` | capability status (live vs mock) |
 | `GET` | `/cards/:file`, `/clips/:file` | generated artifacts |
 
@@ -115,7 +114,6 @@ See **[SETUP.md](./SETUP.md)** for the full, step-by-step setup of every capabil
 
 - **Shared leaderboard** (Convex): "most human vs most slop-pilled" → tag-bait + repeat visits.
 - **Anti-spoof card**: the SlopScore **and the link are drawn onto the image**, so reposts carry the link back.
-- **Revenue** (Dodo): full forensic breakdown + anonymous roast-someone mode behind a $2 impulse buy.
 - **Weekly cron** re-test (`npm run cron`) DMs/updates "your slop score this week".
 
 ## Project layout
@@ -127,7 +125,7 @@ src/
   mcp/server.ts      SlopScore MCP server — the tools Hermes calls (+ integration test)
   hermes/runner.ts   invokes `hermes -z`, parses the SlopReport (direct fallback)
   web/server.ts      the webapp backend + JSON API + artifact serving
-  integrations/      linkup · card · elevenlabs · dodo
+  integrations/      linkup · card · elevenlabs
   store/             Convex ↔ local-JSON store (leaderboard + memory)
   pipeline.ts        computeReport (fetch+score) + finalize (card+voice+store)
   cli.ts cron.ts     terminal scorer + weekly re-test

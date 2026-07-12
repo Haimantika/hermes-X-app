@@ -71,7 +71,6 @@ cp .env.example .env
 | **LinkUp** (real tweets) | [linkup.so](https://www.linkup.so) | `LINKUP_API_KEY` | verify the response shape once live (see below) |
 | **ElevenLabs** (voice clip) | [elevenlabs.io](https://elevenlabs.io) | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` (optional) | clip is served to the webapp only when live |
 | **Convex** (shared board) | run `npx convex dev` | `CONVEX_URL` | see below |
-| **Dodo** ($2 unlock) | [dodopayments.com](https://dodopayments.com) | `DODO_API_KEY`, `DODO_PRODUCT_ID`, `DODO_ENV` | create a $2 product first |
 | **Image gen bg** (optional) | OpenAI | `OPENAI_API_KEY` | card works without it; this only adds an AI background |
 
 The verdict card renderer needs **no key** — it's always on.
@@ -86,13 +85,6 @@ npx convex dev      # first run: login, creates a deployment, generates
 Paste the printed URL into `.env` as `CONVEX_URL`. This deploys `convex/schema.ts`
 + the leaderboard/history/user functions. Until then, the board lives in
 `.data/store.json` locally.
-
-### Dodo
-
-Create a **$2 product** in the Dodo dashboard, put its id in `DODO_PRODUCT_ID`,
-keep `DODO_ENV=test` until you're ready for real charges. The `/api/unlock`
-endpoint returns a checkout link. Flipping a user to *premium after payment*
-needs a Dodo webhook → `store.setPremium` (not yet wired — see Open items).
 
 ---
 
@@ -125,7 +117,4 @@ secondary surface; the webapp is primary.
 1. **LinkUp parser** — `src/integrations/linkup.ts` queries general search and
    splits snippets into tweets. Once your key is in, run one real call and tune
    the parser to LinkUp's actual JSON shape.
-2. **Dodo → premium webhook** — `/api/unlock` creates the checkout; a webhook
-   endpoint that verifies payment and calls `store.setPremium(userId, true)` is
-   the last mile for automatic unlocks.
 ```

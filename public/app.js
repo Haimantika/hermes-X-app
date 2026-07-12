@@ -1,6 +1,6 @@
 const $ = (id) => document.getElementById(id);
 
-// A per-browser id so scores map to a "user" for premium/history.
+// A per-browser id so scores map to a "user" for history.
 const userId =
   localStorage.getItem("slopscore_uid") ||
   (() => {
@@ -198,19 +198,6 @@ async function loadBoard(dir) {
       .join("") || `<li><span class="who">no scores yet — be the first.</span></li>`;
 }
 
-async function unlock() {
-  const res = await fetch("/api/unlock", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, handle: lastReport?.handle || "self" }),
-  });
-  const data = await res.json();
-  if (data.mock) {
-    toast("demo mode — set dodo keys for a real $" + data.price + " checkout");
-  }
-  window.open(data.url.split(" ")[0], "_blank");
-}
-
 // Wiring
 $("score-form").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -221,11 +208,6 @@ $("score-form").addEventListener("submit", (e) => {
 document.querySelectorAll(".tab").forEach((t) =>
   t.addEventListener("click", () => loadBoard(t.dataset.dir))
 );
-$("unlock-btn").addEventListener("click", unlock);
-$("nav-unlock").addEventListener("click", (e) => {
-  e.preventDefault();
-  unlock();
-});
 function xIntentUrl() {
   if (!lastShare) return null;
   return (

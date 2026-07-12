@@ -8,7 +8,7 @@ import { v } from "convex/values";
  *                queryable "most human" vs "most slop-pilled".
  * - `history`  : every score ever run, so cron can fire a weekly re-test and
  *                show trend ("your slop score this week").
- * - `users`    : Telegram user memory + premium (Dodo) flag.
+ * - `users`    : Telegram user memory.
  */
 export default defineSchema({
   scores: defineTable({
@@ -35,7 +35,6 @@ export default defineSchema({
   users: defineTable({
     userId: v.string(),
     handle: v.optional(v.string()),
-    premium: v.boolean(),
     lastScoredAt: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_user", ["userId"]),

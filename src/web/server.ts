@@ -10,7 +10,6 @@
  *   GET  /                     the webapp
  *   POST /api/score            { handle } → full verdict + card/clip URLs
  *   GET  /api/leaderboard      ?direction=slop|human
- *   POST /api/unlock           { userId?, handle? } → Dodo checkout link
  *   GET  /cards/:file          verdict card PNGs
  *   GET  /clips/:file          voice clips
  *   GET  /api/health           capability status
@@ -23,7 +22,6 @@ import { config, capabilitySummary, live } from "../config.js";
 import { runScore } from "../hermes/runner.js";
 import { finalize } from "../pipeline.js";
 import { getStore } from "../store/index.js";
-import { createCheckout } from "../integrations/dodo.js";
 import { cardBasename, renderCardFromSummary } from "../integrations/card.js";
 
 const PUBLIC_DIR = resolve("public");
@@ -284,14 +282,6 @@ async function handleLeaderboard(res: any, url: URL) {
   send(res, 200, { direction, rows });
 }
 
-async function handleUnlock(req: any, res: any) {
-  const body = await readBody(req);
-  const userId = String(body.userId ?? "web");
-  const handle = String(body.handle ?? "self");
-  const checkout = await createCheckout(userId, handle);
-  send(res, 200, { url: checkout.url, mock: checkout.source === "mock", price: config.dodo.priceUsd });
-}
-
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost:${config.web.port}`);
   const path = url.pathname;
@@ -299,7 +289,6 @@ const server = createServer(async (req, res) => {
   try {
     if (req.method === "POST" && path === "/api/score") return handleScore(req, res);
     if (req.method === "GET" && path === "/api/leaderboard") return handleLeaderboard(res, url);
-    if (req.method === "POST" && path === "/api/unlock") return handleUnlock(req, res);
     if (req.method === "GET" && path === "/api/health") {
       return send(res, 200, { ok: true, capabilities: capabilitySummary(), live });
     }

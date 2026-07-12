@@ -42,12 +42,6 @@ export const config = {
   convex: {
     url: env("CONVEX_URL"),
   },
-  dodo: {
-    apiKey: env("DODO_API_KEY"),
-    productId: env("DODO_PRODUCT_ID"),
-    env: env("DODO_ENV") ?? "test",
-    priceUsd: 2,
-  },
 } as const;
 
 /** Which capabilities are wired with real credentials right now. */
@@ -57,7 +51,6 @@ export const live = {
   elevenlabs: Boolean(config.elevenlabs.apiKey),
   imageGen: Boolean(config.imageGen.apiKey),
   convex: Boolean(config.convex.url),
-  dodo: Boolean(config.dodo.apiKey && config.dodo.productId),
 };
 
 export function capabilitySummary(): string {
@@ -67,7 +60,6 @@ export function capabilitySummary(): string {
     `ElevenLabs:${mark(live.elevenlabs)}`,
     `ImageGen:${mark(live.imageGen)}`,
     `Convex:${mark(live.convex)}`,
-    `Dodo:${mark(live.dodo)}`,
     `Telegram:${mark(live.telegram)}`,
   ].join("  ");
 }

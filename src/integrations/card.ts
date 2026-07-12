@@ -9,17 +9,53 @@
 
 import { Resvg } from "@resvg/resvg-js";
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { config } from "../config.js";
 import type { SlopReport } from "../engine/types.js";
 
 const WIDTH = 1200;
 const HEIGHT = 675; // 16:9, ideal for X cards
 
+const EMOJI_DIR = join(dirname(fileURLToPath(import.meta.url)), "emoji");
+const EMOJI_CACHE = new Map<string, string>();
+
 /**
- * Strip emoji + symbol codepoints. resvg renders with system text fonts that
- * have no colour-emoji glyphs, so leaving emoji in produces tofu boxes (□). We
- * remove them and collapse the resulting whitespace before drawing.
+ * Inline a bundled Twemoji glyph. resvg has no colour-emoji font, so instead of
+ * relying on text glyphs we drop the emoji's own vector shapes straight into the
+ * card SVG. Returns the inner markup of the 36x36 Twemoji source (paths only).
+ */
+function emojiInner(code: string): string {
+  let inner = EMOJI_CACHE.get(code);
+  if (inner === undefined) {
+    const raw = readFileSync(join(EMOJI_DIR, `${code}.svg`), "utf8");
+    inner = raw.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+    EMOJI_CACHE.set(code, inner);
+  }
+  return inner;
+}
+
+/** Render a Twemoji glyph (native 36x36 viewBox) at (x,y), scaled to `size` px. */
+function emoji(code: string, x: number, y: number, size: number, opacity = 1): string {
+  const s = size / 36;
+  const op = opacity !== 1 ? ` opacity="${opacity}"` : "";
+  return `<g transform="translate(${x} ${y}) scale(${s})"${op}>${emojiInner(code)}</g>`;
+}
+
+/** Score → reaction face. More slop = more alarmed. Matches scoreColor tiers. */
+function scoreFace(score: number): string {
+  if (score >= 75) return "1f480"; // 💀 fully cooked
+  if (score >= 55) return "1f62c"; // 😬 yikes
+  if (score >= 35) return "1fae3"; // 🫣 peeking
+  if (score >= 18) return "1f60c"; // 😌 relieved
+  return "1f607"; // 😇 gloriously human
+}
+
+/**
+ * Strip emoji + symbol codepoints from user/report text. Text is drawn with
+ * system fonts that have no colour-emoji glyphs, so stray emoji in copy would
+ * become tofu boxes (□). Decorative emoji are drawn separately as vectors.
  */
 function stripEmoji(s: string): string {
   return s
@@ -123,6 +159,11 @@ export function buildCardSvg(report: SlopReport): string {
   <!-- Big score, right side -->
   <text x="${WIDTH - 70}" y="150" text-anchor="end" font-family="Arial, sans-serif" font-size="150" font-weight="900" fill="${color}">${report.slopScore}</text>
   <text x="${WIDTH - 70}" y="192" text-anchor="end" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#8891a5">/ 100 SLOP</text>
+
+  <!-- Reaction face + sparkles, keyed to the score -->
+  ${emoji("2728", 928, 338, 34, 0.85)}
+  ${emoji(scoreFace(report.slopScore), 955, 232, 175)}
+  ${emoji("2728", 1096, 208, 50, 0.95)}
 
   <!-- Handle + verdict -->
   <text x="70" y="200" font-family="Arial, sans-serif" font-size="46" font-weight="800" fill="#ffffff">@${xmlEscape(

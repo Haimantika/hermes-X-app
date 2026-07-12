@@ -404,16 +404,6 @@ a:hover { color: var(--accent-hi); }
 }
 #clip { width: 100%; margin-top: 8px; }
 
-/* Unlock */
-.unlock-cta { text-align: center; }
-.unlock-cta p {
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 14px;
-  margin: 0 0 18px;
-}
-.unlock-cta strong { color: var(--text); }
-
 /* Leaderboard */
 .leaderboard { margin-top: 64px; }
 .tabs { display: flex; gap: 10px; margin-bottom: 16px; }
