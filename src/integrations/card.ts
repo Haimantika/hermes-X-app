@@ -12,8 +12,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { config } from "../config.js";
 import type { SlopReport } from "../engine/types.js";
+import { computeBadges, type Badge } from "../engine/badges.js";
 
 const WIDTH = 1200;
 const HEIGHT = 675; // 16:9, ideal for X cards
@@ -104,9 +104,84 @@ function scoreColor(score: number): string {
   return "#3ddc84";
 }
 
+/**
+ * A single punchy roast line for the card footer ("quick roast" mode).
+ * Deterministic given the report: leads with the worst tell when receipts are
+ * present, otherwise falls back to a score-keyed jab so summary-rebuilt cards
+ * still land. Kept to one line so it fits the footer band.
+ */
+function quickRoast(report: SlopReport): string {
+  const top = report.tells.find((t) => t.hits > 0);
+  const s = report.slopScore;
+
+  let line: string;
+  if (top) {
+    const label = top.label.toLowerCase();
+    if (s >= 75) line = `${top.hits}× ${label} — the model isn't assisting you, it's writing you.`;
+    else if (s >= 45) line = `${top.hits}× ${label} — human core, GPT crust, receipts attached.`;
+    else line = `A little ${label} (${top.hits}×), but this mostly reads like a real person.`;
+  } else if (s >= 75) {
+    line = "The slop is coming from inside the timeline. It's not looking great, bestie.";
+  } else if (s >= 45) {
+    line = "Half human, half autocomplete — and you know which half.";
+  } else if (s >= 18) {
+    line = "Mostly human, with the occasional GPT tab left open.";
+  } else {
+    line = "Gloriously, messily, real. The rare human-typed timeline.";
+  }
+
+  const MAX = 96;
+  return line.length > MAX ? `${line.slice(0, MAX - 1).trimEnd()}…` : line;
+}
+
+/**
+ * Lay out earned badges as a single left-aligned row of rounded pills just under
+ * the handle/verdict block. Widths are estimated from the label length (Arial
+ * ~0.56em per char) so nothing needs a real text-measuring pass. The row stops
+ * short of the reaction face on the right, and badges that would spill past that
+ * margin are dropped so the row always stays on one clean line.
+ */
+const BADGE_ROW_TOP = 292;
+const BADGE_ROW_HEIGHT = 44;
+
+function renderBadges(badges: Badge[], color: string): string {
+  if (badges.length === 0) return "";
+
+  const yTop = BADGE_ROW_TOP;
+  const h = BADGE_ROW_HEIGHT;
+  const emojiSize = 22;
+  const fontSize = 21;
+  const leftPad = 16;
+  const gapEmojiText = 9;
+  const rightPad = 16;
+  const pillGap = 13;
+  const maxRight = 900; // leave the reaction face on the right untouched
+
+  let x = 70;
+  let svg = "";
+  for (const b of badges) {
+    const label = xmlEscape(b.label);
+    const textW = Math.ceil(label.length * fontSize * 0.56);
+    const pillW = leftPad + emojiSize + gapEmojiText + textW + rightPad;
+    if (x + pillW > maxRight) break; // keep the row to a single line
+
+    svg += `<rect x="${x}" y="${yTop}" width="${pillW}" height="${h}" rx="23" fill="#1c2434" stroke="${color}" stroke-opacity="0.55" stroke-width="1.5"/>`;
+    svg += emoji(b.emoji, x + leftPad, yTop + (h - emojiSize) / 2, emojiSize);
+    svg += `<text x="${x + leftPad + emojiSize + gapEmojiText}" y="${
+      yTop + h / 2 + fontSize * 0.36
+    }" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="#e7ebf3">${label}</text>`;
+    x += pillW + pillGap;
+  }
+  return svg;
+}
+
 export function buildCardSvg(report: SlopReport): string {
   const color = scoreColor(report.slopScore);
-  const linkLabel = config.publicUrl.replace(/^https?:\/\//, "");
+  const badges = computeBadges({
+    handle: report.handle,
+    slopScore: report.slopScore,
+  }).slice(0, 4);
+  const badgesSvg = renderBadges(badges, color);
 
   // Top 3 fired tells as receipts.
   const fired = report.tells.filter((t) => t.hits > 0).slice(0, 3);
@@ -121,8 +196,10 @@ export function buildCardSvg(report: SlopReport): string {
   }
 
   let receiptsSvg = "";
-  let y = 300;
-  for (const line of receiptLines.slice(0, 9)) {
+  // Start receipts below the badge row when badges are present, else reclaim the space.
+  let y = badges.length > 0 ? BADGE_ROW_TOP + BADGE_ROW_HEIGHT + 34 : 300;
+  for (const line of receiptLines.slice(0, 7)) {
+    if (y > HEIGHT - 130) break; // keep clear of the quick-roast footer band
     if (line.startsWith("__HEAD__")) {
       y += 14;
       receiptsSvg += `<text x="70" y="${y}" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="${color}">${xmlEscape(
@@ -176,15 +253,19 @@ export function buildCardSvg(report: SlopReport): string {
     report.tagline
   )}</text>
 
+  <!-- Collectible badges -->
+  ${badgesSvg}
+
   <!-- Receipts -->
   ${receiptsSvg}
 
-  <!-- Footer: link baked in (anti-spoof) -->
-  <rect x="0" y="${HEIGHT - 60}" width="${WIDTH}" height="60" fill="#0a0d14"/>
-  <text x="70" y="${HEIGHT - 22}" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#ffffff">${xmlEscape(
-    linkLabel
+  <!-- Quick roast footer band -->
+  <rect x="0" y="${HEIGHT - 96}" width="${WIDTH}" height="96" fill="#0a0d14"/>
+  <rect x="0" y="${HEIGHT - 96}" width="${WIDTH}" height="3" fill="url(#accent)"/>
+  <text x="70" y="${HEIGHT - 54}" font-family="Arial, sans-serif" font-size="22" font-weight="800" fill="${color}">Okay, this is what it is.</text>
+  <text x="70" y="${HEIGHT - 22}" font-family="Georgia, serif" font-size="26" font-style="italic" fill="#eef1f6">${xmlEscape(
+    quickRoast(report)
   )}</text>
-  <text x="${WIDTH - 70}" y="${HEIGHT - 22}" text-anchor="end" font-family="Arial, sans-serif" font-size="22" fill="#8891a5">get your score → DM the bot your @</text>
 </svg>`;
 }
 
