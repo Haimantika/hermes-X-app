@@ -152,6 +152,11 @@ export interface CardResult {
   png: Buffer;
 }
 
+/** The deterministic on-disk / URL filename for a handle's verdict card. */
+export function cardBasename(handle: string, slopScore: number): string {
+  return `slopscore-${handle}-${slopScore}.png`;
+}
+
 export async function renderCard(report: SlopReport, outDir = "output"): Promise<CardResult> {
   const svg = buildCardSvg(report);
   const resvg = new Resvg(svg, {
@@ -159,8 +164,39 @@ export async function renderCard(report: SlopReport, outDir = "output"): Promise
     font: { loadSystemFonts: true },
   });
   const png = resvg.render().asPng();
-  const path = resolve(outDir, `slopscore-${report.handle}-${report.slopScore}.png`);
+  const path = resolve(outDir, cardBasename(report.handle, report.slopScore));
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, png);
   return { path, png };
+}
+
+/** A minimal summary sufficient to redraw a card when the full report is gone. */
+export interface CardSummary {
+  handle: string;
+  slopScore: number;
+  verdict: string;
+  tagline?: string;
+}
+
+/**
+ * Rebuild a handle's card from stored summary fields (no receipts). Used by the
+ * share page so a shareable link keeps working even if the original PNG was
+ * cleaned up or lost across a redeploy.
+ */
+export async function renderCardFromSummary(
+  summary: CardSummary,
+  outDir = "output"
+): Promise<CardResult> {
+  const report: SlopReport = {
+    handle: summary.handle,
+    slopScore: summary.slopScore,
+    verdict: summary.verdict,
+    tagline: summary.tagline ?? "",
+    sampleSize: 0,
+    tells: [],
+    roast: "",
+    tips: [],
+    generatedAt: new Date().toISOString(),
+  };
+  return renderCard(report, outDir);
 }

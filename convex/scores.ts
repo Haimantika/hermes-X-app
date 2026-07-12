@@ -45,6 +45,17 @@ export const record = mutation({
   },
 });
 
+/** Latest score for a single handle — powers the shareable card page. */
+export const getByHandle = query({
+  args: { handle: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("scores")
+      .withIndex("by_handle", (q) => q.eq("handle", args.handle))
+      .unique();
+  },
+});
+
 /** Leaderboard. direction "slop" = most slop-pilled, "human" = most human. */
 export const leaderboard = query({
   args: {

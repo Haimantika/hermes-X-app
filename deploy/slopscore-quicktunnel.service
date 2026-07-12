@@ -1,0 +1,22 @@
+# Persistent Cloudflare QUICK tunnel (no domain needed) as a systemd service.
+# Install: copy to /etc/systemd/system/slopscore-quicktunnel.service
+#          systemctl daemon-reload && systemctl enable --now slopscore-quicktunnel
+# Get the current public URL:
+#          journalctl -u slopscore-quicktunnel | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' | tail -1
+#
+# NOTE: a quick-tunnel URL is RANDOM and CHANGES every restart. Fine for a demo
+# that stays up; for a permanent URL use the named tunnel (deploy/CLOUDFLARE.md).
+
+[Unit]
+Description=Cloudflare quick tunnel for SlopScore (localhost:3000)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/cloudflared tunnel --no-autoupdate --url http://localhost:3000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

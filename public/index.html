@@ -62,6 +62,7 @@
           <div class="score-row">
             <div class="score-num" id="score-num">0</div>
             <div class="score-den">/ 100 slop</div>
+            <div class="score-face" id="score-face" aria-hidden="true"></div>
           </div>
           <p class="tagline" id="tagline"></p>
           <p class="meta" id="meta"></p>
@@ -69,7 +70,7 @@
           <div class="bars" id="signal-bars"></div>
 
           <div class="tips-block">
-            <div class="section-label">how to sound less like a bot</div>
+            <div class="section-label"><span class="label-emoji">🛠</span> how to sound less like a bot</div>
             <div class="tips-list" id="tips-list"></div>
           </div>
         </div>
@@ -82,8 +83,9 @@
             <img id="card-img" alt="Your SlopScore verdict card" />
           </div>
           <div class="card-actions">
-            <a id="download-card" class="btn primary" download>download card</a>
-            <button id="share-btn" class="btn ghost">copy roast</button>
+            <button id="share-x" class="btn primary">share on X</button>
+            <a id="download-card" class="btn ghost" download>download</a>
+            <button id="copy-link" class="btn ghost">copy link</button>
           </div>
         </div>
 

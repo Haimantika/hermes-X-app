@@ -33,6 +33,7 @@ export interface HistoryRow {
 export interface Store {
   backend: "convex" | "local";
   record(report: SlopReport, requestedBy?: string): Promise<void>;
+  getByHandle(handle: string): Promise<LeaderRow | null>;
   leaderboard(direction: "slop" | "human", limit?: number): Promise<LeaderRow[]>;
   history(handle: string, limit?: number): Promise<HistoryRow[]>;
   stale(olderThanMs: number, limit?: number): Promise<LeaderRow[]>;
@@ -70,6 +71,11 @@ class ConvexStore implements Store {
       sampleSize: report.sampleSize,
       requestedBy,
     });
+  }
+
+  async getByHandle(handle: string): Promise<LeaderRow | null> {
+    const row = await this.client.query(this.api.scores.getByHandle, { handle });
+    return (row as LeaderRow) ?? null;
   }
 
   async leaderboard(direction: "slop" | "human", limit = 10): Promise<LeaderRow[]> {
@@ -145,6 +151,11 @@ class LocalStore implements Store {
       createdAt: now,
     });
     await this.save();
+  }
+
+  async getByHandle(handle: string): Promise<LeaderRow | null> {
+    await this.load();
+    return this.data.scores[handle] ?? null;
   }
 
   async leaderboard(direction: "slop" | "human", limit = 10): Promise<LeaderRow[]> {

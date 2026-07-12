@@ -28,6 +28,15 @@ function scoreColor(s) {
   return "#6fe08a";
 }
 
+// Score-based emoji pair: [big reaction face, small badge face].
+function scoreEmoji(s) {
+  if (s >= 80) return { face: "💀", badge: "🤖" };
+  if (s >= 60) return { face: "😬", badge: "🫥" };
+  if (s >= 40) return { face: "🫣", badge: "🫥" };
+  if (s >= 20) return { face: "😌", badge: "🌱" };
+  return { face: "🧑", badge: "✨" };
+}
+
 function toast(msg) {
   const el = document.createElement("div");
   el.className = "toast";
@@ -84,17 +93,27 @@ async function scoreHandle(handle) {
 }
 
 let lastReport = null;
+let lastShare = null;
 function renderResult(data) {
   const r = data.report;
   lastReport = r;
+  lastShare = {
+    url: data.shareUrl || location.origin + "/s/" + r.handle,
+    text: data.shareText || `@${r.handle} scored ${r.slopScore}/100 on SlopScore — “${r.verdict}”. Can you beat it? 🧪`,
+    intent: data.shareIntent,
+    cardUrl: data.cardUrl,
+  };
   const color = scoreColor(r.slopScore);
+  const emoji = scoreEmoji(r.slopScore);
 
   $("result-handle").textContent = r.handle;
   countUp($("score-num"), r.slopScore);
 
+  $("score-face").textContent = emoji.face;
+
   const badge = $("tier-badge");
-  badge.textContent = r.verdict;
-  badge.style.color = color;
+  badge.innerHTML = `<span class="badge-emoji">${emoji.badge}</span>${escapeHtml(r.verdict)}`;
+  badge.style.background = color;
   badge.style.borderColor = color;
 
   $("tagline").textContent = "“" + r.tagline + "”";
@@ -207,10 +226,47 @@ $("nav-unlock").addEventListener("click", (e) => {
   e.preventDefault();
   unlock();
 });
-$("share-btn").addEventListener("click", () => {
-  if (!lastReport) return;
-  const text = `my slopscore is ${lastReport.slopScore}/100 — ${lastReport.verdict}. ${location.origin} 🧪`;
-  navigator.clipboard.writeText(text).then(() => toast("share text copied!"));
+function xIntentUrl() {
+  if (!lastShare) return null;
+  return (
+    lastShare.intent ||
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(lastShare.text)}&url=${encodeURIComponent(lastShare.url)}`
+  );
+}
+
+// Try to attach the actual PNG via the native share sheet (mobile), so the user
+// can post the image straight to X. Falls back to the X web intent (which
+// unfurls the shareable link into the card image) everywhere else.
+async function shareOnX() {
+  if (!lastShare) return;
+  if (navigator.canShare && lastShare.cardUrl) {
+    try {
+      const resp = await fetch(lastShare.cardUrl);
+      const blob = await resp.blob();
+      const file = new File([blob], "slopscore.png", { type: blob.type || "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "SlopScore",
+          text: `${lastShare.text} ${lastShare.url}`,
+        });
+        return;
+      }
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+    }
+  }
+  const url = xIntentUrl();
+  if (url) window.open(url, "_blank", "noopener");
+}
+
+$("share-x").addEventListener("click", shareOnX);
+$("copy-link").addEventListener("click", () => {
+  if (!lastShare) return;
+  navigator.clipboard
+    .writeText(lastShare.url)
+    .then(() => toast("share link copied!"))
+    .catch(() => toast(lastShare.url));
 });
 
 // Init

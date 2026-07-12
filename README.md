@@ -30,8 +30,23 @@ Browser (webapp) ──POST /api/score { handle }──▶ Node web server
                           JSON + card + clip ─────────▶ webapp renders result
 ```
 
-- **Hermes is mandatory** in the scoring path. `HERMES_MODE=cli` enforces it (fails if Hermes is missing); `auto` uses Hermes when installed and falls back to a direct in-process run for local dev.
-- The **scoring engine stays deterministic** and lives behind an MCP tool, so the roast is reproducible and the receipts are auditable.
+
+### How it actually works
+
+The three key tools each play one job, and the pipeline is split into two phases so the *agent* owns the thinking and the *server* owns the deterministic rendering:
+
+- **Hermes (the agent) — does the scoring.** The web server never scores in-process on the main path. It spawns `hermes -z "call score_slop for @handle, return the JSON"`. Hermes connects over MCP stdio to the SlopScore MCP server (`src/mcp/server.ts`), decides to call the `score_slop` tool, and returns the raw `SlopReport` JSON, which the server parses back out.
+- **LinkUp — supplies the data.** Inside `score_slop`, LinkUp fetches the handle's recent posts (`POST https://api.linkup.so/v1/search`). Those tweets feed the deterministic slop engine. No `LINKUP_API_KEY`? It falls back to a mock timeline so the app still runs.
+- **Convex — stores the results.** After Hermes returns, the server writes the score to Convex (leaderboard + history + users) and reads it back for the board and share pages. The browser never talks to Convex directly — only the Node server does, via `ConvexHttpClient`. No `CONVEX_URL`? Scores go to a local `.data/store.json`.
+
+A single `POST /api/score` therefore flows:
+
+1. Browser → `POST /api/score { handle }`.
+2. **Phase 1 — `computeReport`** (the agent part): server spawns **Hermes** → Hermes calls the `score_slop` MCP tool → the tool pulls tweets via **LinkUp** → deterministic engine produces the `SlopReport` → Hermes returns the JSON.
+3. **Phase 2 — `finalize`** (deterministic, always server-side): persist the report to **Convex**, render the verdict card (PNG), and generate the ElevenLabs voice clip.
+4. Server responds with the report + `cardUrl` + `clipUrl`; the webapp renders it and pulls the leaderboard from Convex.
+
+**Everything degrades gracefully:** no LinkUp key → mock tweets, no Hermes CLI → direct in-process scoring, no Convex → local JSON. The whole app runs end-to-end with zero keys.
 
 ---
 

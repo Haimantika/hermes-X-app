@@ -1,0 +1,16 @@
+# Cloudflare NAMED tunnel config for SlopScore.
+# Install to /etc/cloudflared/config.yml on the droplet, then:
+#   cloudflared service install && systemctl enable --now cloudflared
+#
+# Requires a domain on Cloudflare (see deploy/CLOUDFLARE.md). Replace the
+# tunnel id, credentials path, and hostname with your own.
+
+tunnel: REPLACE_WITH_TUNNEL_ID
+credentials-file: /root/.cloudflared/REPLACE_WITH_TUNNEL_ID.json
+
+ingress:
+  # Public hostname → the local SlopScore web app.
+  - hostname: slopscore.yourdomain.com
+    service: http://localhost:3000
+  # Everything else 404s.
+  - service: http_404
